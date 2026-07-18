@@ -40,6 +40,7 @@ export interface Product {
   specs: Record<string, string>;
   featured: boolean;
   active: boolean;
+  campaign: string | null;
   rating_avg: number;
   rating_count: number;
   created_at: string;

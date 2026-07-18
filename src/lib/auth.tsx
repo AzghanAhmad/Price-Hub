@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { Profile } from './types';
 
@@ -9,7 +9,11 @@ interface AuthState {
   loading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string
+  ) => Promise<{ error: string | null; needsEmailConfirm?: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -27,17 +31,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile(uid: string) {
-    const { data, error } = await supabase
+  async function ensureProfile(user: User, fullName?: string) {
+    const name =
+      fullName?.trim() ||
+      (user.user_metadata?.full_name as string | undefined) ||
+      '';
+
+    // Prefer existing row
+    const { data: existing, error: readErr } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', uid)
+      .eq('user_id', user.id)
       .maybeSingle();
-    if (error) {
+
+    if (readErr) {
       // eslint-disable-next-line no-console
-      console.error('loadProfile error', error.message);
+      console.error('loadProfile error', readErr.message);
     }
-    setProfile(data as Profile | null);
+
+    if (existing) {
+      setProfile(existing as Profile);
+      return existing as Profile;
+    }
+
+    // Create profile if trigger didn't (or row not visible yet)
+    const { data: created, error: insertErr } = await supabase
+      .from('profiles')
+      .upsert(
+        { user_id: user.id, full_name: name, role: 'customer' },
+        { onConflict: 'user_id' }
+      )
+      .select('*')
+      .maybeSingle();
+
+    if (insertErr) {
+      // eslint-disable-next-line no-console
+      console.error('ensureProfile insert error', insertErr.message);
+      setProfile(null);
+      return null;
+    }
+
+    setProfile(created as Profile | null);
+    return created as Profile | null;
   }
 
   useEffect(() => {
@@ -47,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(data.session);
       if (data.session?.user) {
-        loadProfile(data.session.user.id).finally(() => mounted && setLoading(false));
+        ensureProfile(data.session.user).finally(() => mounted && setLoading(false));
       } else {
         setLoading(false);
       }
@@ -56,9 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       if (sess?.user) {
-        (async () => {
-          await loadProfile(sess.user.id);
-        })();
+        void ensureProfile(sess.user);
       } else {
         setProfile(null);
       }
@@ -72,8 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? error.message : null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    if (data.user) await ensureProfile(data.user);
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -83,21 +118,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { full_name: fullName } },
     });
     if (error) return { error: error.message };
-    // if session returned (email confirm off), load profile
-    if (data.session?.user) {
-      await loadProfile(data.session.user.id);
+
+    // Email confirmation still enabled → user created but no session yet
+    if (!data.session) {
+      return {
+        error: null,
+        needsEmailConfirm: true,
+      };
     }
+
+    if (data.user) await ensureProfile(data.user, fullName);
     return { error: null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('signOut error', error.message);
+    }
     setProfile(null);
     setSession(null);
   };
 
   const refreshProfile = async () => {
-    if (session?.user) await loadProfile(session.user.id);
+    if (session?.user) await ensureProfile(session.user);
   };
 
   return (

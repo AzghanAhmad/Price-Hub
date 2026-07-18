@@ -1,16 +1,44 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Zap, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, Zap, TrendingUp, Sparkles, Heart, Moon, Flame } from 'lucide-react';
 import type { Category, Product } from '../lib/types';
 import { fetchCategories, fetchProducts } from '../lib/data';
 import ProductCard from '../components/ProductCard';
 import { formatPKR, discountPercent } from '../lib/format';
 import SafeImage from '../components/SafeImage';
 
+const CAMPAIGNS = [
+  {
+    key: 'Valentine Sale',
+    title: 'Valentine Sale',
+    subtitle: 'Gift tech they will love. Extra 20% with code VALENTINE20.',
+    code: 'VALENTINE20',
+    icon: Heart,
+    gradient: 'from-rose-600 to-pink-500',
+  },
+  {
+    key: 'Eid Mega Deal',
+    title: 'Eid Mega Deal',
+    subtitle: 'Big savings on flagships. Use code EIDMEGA at checkout.',
+    code: 'EIDMEGA',
+    icon: Moon,
+    gradient: 'from-emerald-700 to-teal-500',
+  },
+  {
+    key: 'Flash Friday',
+    title: 'Flash Friday',
+    subtitle: 'Limited-time drops. Flat Rs. 2,000 off with FLASH50.',
+    code: 'FLASH50',
+    icon: Flame,
+    gradient: 'from-orange-600 to-amber-500',
+  },
+] as const;
+
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
   const [deals, setDeals] = useState<Product[]>([]);
+  const [campaignProducts, setCampaignProducts] = useState<Record<string, Product[]>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,11 +46,17 @@ export default function Home() {
       fetchCategories(),
       fetchProducts({ featured: true, limit: 8 }),
       fetchProducts({ sort: 'discount', limit: 8 }),
+      ...CAMPAIGNS.map((c) => fetchProducts({ campaign: c.key, limit: 4 })),
     ])
-      .then(([c, f, d]) => {
+      .then(([c, f, d, ...campLists]) => {
         setCategories(c);
         setFeatured(f);
         setDeals(d);
+        const map: Record<string, Product[]> = {};
+        CAMPAIGNS.forEach((camp, i) => {
+          map[camp.key] = campLists[i] as Product[];
+        });
+        setCampaignProducts(map);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -53,8 +87,8 @@ export default function Home() {
                 <Link to="/catalog" className="btn-accent !px-6 !py-3 text-base">
                   Shop Now <ArrowRight width={18} height={18} />
                 </Link>
-                <Link to="/catalog?deals=1" className="btn-ghost !bg-white/10 !text-white !border-white/20 !px-6 !py-3 text-base hover:!bg-white/20">
-                  <Zap width={18} height={18} /> Hot Deals
+                <Link to="/catalog?campaign=Valentine%20Sale" className="btn-ghost !bg-white/10 !text-white !border-white/20 !px-6 !py-3 text-base hover:!bg-white/20">
+                  <Heart width={18} height={18} /> Valentine Sale
                 </Link>
               </div>
             </div>
@@ -102,6 +136,62 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Campaign banners */}
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-extrabold text-slate-900">Live Campaigns</h2>
+          <p className="mt-1 text-sm text-slate-500">Limited-time sales with exclusive promo codes</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {CAMPAIGNS.map((camp) => (
+            <Link
+              key={camp.key}
+              to={`/catalog?campaign=${encodeURIComponent(camp.key)}`}
+              className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${camp.gradient} p-6 text-white shadow-lg transition-transform hover:-translate-y-0.5`}
+            >
+              <camp.icon className="absolute -right-2 -top-2 h-24 w-24 text-white/15" />
+              <span className="chip bg-white/20 text-white text-[10px]">Code: {camp.code}</span>
+              <h3 className="mt-3 text-xl font-extrabold">{camp.title}</h3>
+              <p className="mt-1 text-sm text-white/90">{camp.subtitle}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold">
+                Shop now <ArrowRight width={16} height={16} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Per-campaign product strips */}
+      {CAMPAIGNS.map((camp) => {
+        const list = campaignProducts[camp.key] || [];
+        if (!loading && list.length === 0) return null;
+        return (
+          <section key={camp.key} className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+            <div className="mb-6 flex items-end justify-between">
+              <div className="flex items-center gap-2">
+                <camp.icon className="text-rose-500" width={22} height={22} />
+                <h2 className="text-2xl font-extrabold text-slate-900">{camp.title}</h2>
+              </div>
+              <Link
+                to={`/catalog?campaign=${encodeURIComponent(camp.key)}`}
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+              >
+                See all →
+              </Link>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-72 rounded-2xl" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {list.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       {/* Featured */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">

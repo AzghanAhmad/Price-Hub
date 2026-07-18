@@ -24,6 +24,7 @@ export default function Catalog() {
 
   const q = params.get('q') || '';
   const categorySlug = params.get('category') || '';
+  const campaign = params.get('campaign') || '';
   const dealsOnly = params.get('deals') === '1';
   const sort = (params.get('sort') as typeof SORTS[number]['key']) || 'newest';
   const selectedBrands = params.get('brand') ? params.get('brand')!.split(',') : [];
@@ -49,6 +50,7 @@ export default function Catalog() {
       sort,
       minPrice: minP,
       maxPrice: maxP,
+      campaign: campaign || undefined,
     })
       .then((data) => {
         let filtered = data;
@@ -64,7 +66,7 @@ export default function Catalog() {
         setProducts(filtered);
       })
       .finally(() => setLoading(false));
-  }, [q, categorySlug, sort, dealsOnly, minP, maxP, selectedBrands.length, categories, brands]);
+  }, [q, categorySlug, campaign, sort, dealsOnly, minP, maxP, selectedBrands.length, categories, brands]);
 
   function update(key: string, value: string | null) {
     const next = new URLSearchParams(params);
@@ -83,7 +85,7 @@ export default function Catalog() {
     setParams(new URLSearchParams());
   }
 
-  const activeCount = (categorySlug ? 1 : 0) + selectedBrands.length + (dealsOnly ? 1 : 0) + (minP ? 1 : 0) + (maxP ? 1 : 0);
+  const activeCount = (categorySlug ? 1 : 0) + (campaign ? 1 : 0) + selectedBrands.length + (dealsOnly ? 1 : 0) + (minP ? 1 : 0) + (maxP ? 1 : 0);
 
   const FilterPanel = (
     <div className="space-y-6">
@@ -179,7 +181,15 @@ export default function Catalog() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">
-          {selectedCategory ? selectedCategory.name : dealsOnly ? 'Today\u2019s Deals' : q ? `Results for "${q}"` : 'All Products'}
+          {campaign
+            ? campaign
+            : selectedCategory
+              ? selectedCategory.name
+              : dealsOnly
+                ? 'Today\u2019s Deals'
+                : q
+                  ? `Results for "${q}"`
+                  : 'All Products'}
         </h1>
         <p className="mt-1 text-sm text-slate-500">{loading ? 'Loading…' : `${products.length} products found`}</p>
       </div>

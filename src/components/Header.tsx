@@ -10,14 +10,16 @@ import SafeImage from './SafeImage';
 
 export default function Header() {
   const { cartCount, wishlist } = useStore();
-  const { profile, isAdmin, signOut } = useAuth();
+  const { session, profile, isAdmin, signOut, loading: authLoading } = useAuth();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSug, setShowSug] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
   const boxRef = useRef<HTMLDivElement>(null);
+  const isLoggedIn = !!session?.user;
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -138,11 +140,15 @@ export default function Header() {
               </button>
               {userMenu && (
                 <div className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-2xl bg-white text-slate-800 shadow-2xl ring-1 ring-slate-200">
-                  {profile ? (
+                  {isLoggedIn ? (
                     <>
                       <div className="border-b border-slate-100 px-4 py-3">
-                        <p className="truncate text-sm font-bold">{profile.full_name || 'Account'}</p>
-                        <p className="truncate text-xs text-slate-500 capitalize">{profile.role}</p>
+                        <p className="truncate text-sm font-bold">
+                          {profile?.full_name || session?.user?.email || 'Account'}
+                        </p>
+                        <p className="truncate text-xs text-slate-500 capitalize">
+                          {profile?.role || 'customer'}
+                        </p>
                       </div>
                       <Link to="/orders" onClick={() => setUserMenu(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50">
                         <Package width={16} height={16} /> My Orders
@@ -153,10 +159,17 @@ export default function Header() {
                         </Link>
                       )}
                       <button
-                        onClick={() => { setUserMenu(false); signOut(); navigate('/'); }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
+                        disabled={signingOut || authLoading}
+                        onClick={async () => {
+                          setSigningOut(true);
+                          setUserMenu(false);
+                          await signOut();
+                          setSigningOut(false);
+                          navigate('/');
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60"
                       >
-                        <LogOut width={16} height={16} /> Sign out
+                        <LogOut width={16} height={16} /> {signingOut ? 'Signing out…' : 'Sign out'}
                       </button>
                     </>
                   ) : (

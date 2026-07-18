@@ -20,6 +20,7 @@ export async function fetchProducts(opts?: {
   minPrice?: number;
   maxPrice?: number;
   featured?: boolean;
+  campaign?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'rating' | 'discount';
   limit?: number;
 }): Promise<Product[]> {
@@ -27,6 +28,7 @@ export async function fetchProducts(opts?: {
   if (opts?.category) q = q.eq('category_id', opts.category);
   if (opts?.brand) q = q.eq('brand_id', opts.brand);
   if (opts?.featured) q = q.eq('featured', true);
+  if (opts?.campaign) q = q.eq('campaign', opts.campaign);
   if (typeof opts?.minPrice === 'number') q = q.gte('price', opts.minPrice);
   if (typeof opts?.maxPrice === 'number') q = q.lte('price', opts.maxPrice);
   if (opts?.search) q = q.ilike('name', `%${opts.search}%`);

@@ -69,8 +69,11 @@ export default function ProductCard({ product, index = 0 }: Props) {
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          {product.campaign && (
+            <span className="chip bg-rose-600 text-white shadow max-w-[9rem] truncate">{product.campaign}</span>
+          )}
           {pct > 0 && <span className="chip bg-rose-500 text-white shadow">-{pct}%</span>}
-          {product.featured && <span className="chip bg-slate-900 text-white shadow">Featured</span>}
+          {product.featured && !product.campaign && <span className="chip bg-slate-900 text-white shadow">Featured</span>}
         </div>
         <button
           onClick={handleWish}

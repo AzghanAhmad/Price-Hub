@@ -36,14 +36,19 @@ export default function Signup() {
     ev.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    const { error } = await signUp(email.trim(), password, name.trim());
+    const { error, needsEmailConfirm } = await signUp(email.trim(), password, name.trim());
     setLoading(false);
     if (error) {
       push(error, 'error');
-    } else {
-      push('Account created. Welcome to PriceHub!');
-      navigate(redirectTo);
+      return;
     }
+    if (needsEmailConfirm) {
+      push('Account created. Check your email to confirm, then sign in.', 'info');
+      navigate('/login');
+      return;
+    }
+    push('Account created. Welcome to PriceHub!');
+    navigate(redirectTo);
   };
 
   return (

@@ -180,6 +180,9 @@ export default function ProductDetail() {
         {/* info */}
         <div>
           {product.brand && <span className="text-sm font-bold uppercase tracking-wide text-slate-400">{product.brand.name}</span>}
+          {product.campaign && (
+            <span className="ml-2 chip bg-rose-100 text-rose-700">{product.campaign}</span>
+          )}
           <h1 className="mt-1 text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl">{product.name}</h1>
 
           <div className="mt-3 flex items-center gap-3">
