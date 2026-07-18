@@ -19,6 +19,7 @@ export default function Header() {
   const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
   const boxRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const isLoggedIn = !!session?.user;
 
   useEffect(() => {
@@ -39,6 +40,8 @@ export default function Header() {
     const handler = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
         setShowSug(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenu(false);
       }
     };
@@ -130,7 +133,7 @@ export default function Header() {
               )}
             </Link>
 
-            <div className="relative">
+            <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setUserMenu((v) => !v)}
                 className="grid h-10 w-10 place-items-center rounded-xl hover:bg-white/10 transition-colors"
@@ -163,9 +166,14 @@ export default function Header() {
                         onClick={async () => {
                           setSigningOut(true);
                           setUserMenu(false);
-                          await signOut();
-                          setSigningOut(false);
-                          navigate('/');
+                          try {
+                            await signOut();
+                          } catch (e) {
+                            console.error('Error during signout:', e);
+                          } finally {
+                            setSigningOut(false);
+                            navigate('/');
+                          }
                         }}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60"
                       >

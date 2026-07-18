@@ -132,13 +132,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error('signOut error', error.message);
+      }
+    } catch (err: any) {
       // eslint-disable-next-line no-console
-      console.error('signOut error', error.message);
+      console.error('signOut exception', err);
+    } finally {
+      setProfile(null);
+      setSession(null);
     }
-    setProfile(null);
-    setSession(null);
   };
 
   const refreshProfile = async () => {
