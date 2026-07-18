@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, LayoutDashboard, LogOut, Package } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, X, LayoutDashboard, LogOut, Package, Trash2 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { useAuth } from '../lib/auth';
 import { searchSuggestions } from '../lib/data';
 import { formatPKR } from '../lib/format';
 import type { Product } from '../lib/types';
 import SafeImage from './SafeImage';
+import { useToast } from './Toast';
 
 export default function Header() {
   const { cartCount, wishlist } = useStore();
-  const { session, profile, isAdmin, signOut, loading: authLoading } = useAuth();
+  const { session, profile, isAdmin, signOut, deleteAccount, loading: authLoading } = useAuth();
+  const { push: toast } = useToast();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSug, setShowSug] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const boxRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -179,6 +183,15 @@ export default function Header() {
                       >
                         <LogOut width={16} height={16} /> {signingOut ? 'Signing out…' : 'Sign out'}
                       </button>
+                      <button
+                        onClick={() => {
+                          setUserMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-sm text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                      >
+                        <Trash2 width={16} height={16} /> Delete Account
+                      </button>
                     </>
                   ) : (
                     <>
@@ -201,6 +214,47 @@ export default function Header() {
           <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="py-2 font-medium text-slate-800">Wishlist</Link>
           <Link to="/orders" onClick={() => setMenuOpen(false)} className="py-2 font-medium text-slate-800">My Orders</Link>
           {isAdmin && <Link to="/admin" onClick={() => setMenuOpen(false)} className="py-2 font-medium text-slate-800">Admin</Link>}
+        </div>
+      )}
+      {/* delete account confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-4">
+              <Trash2 width={24} height={24} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Delete Account</h3>
+            <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+              Are you sure you want to delete your account? This action is permanent and cannot be undone. All your profile details, orders, wishlist, and cart history will be permanently deleted from the database.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  const { error } = await deleteAccount();
+                  setDeleting(false);
+                  if (error) {
+                    toast(error, 'error');
+                  } else {
+                    setShowDeleteConfirm(false);
+                    toast('Your account has been permanently deleted.', 'success');
+                    navigate('/');
+                  }
+                }}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/20 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </header>

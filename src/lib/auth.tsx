@@ -16,6 +16,7 @@ interface AuthState {
   ) => Promise<{ error: string | null; needsEmailConfirm?: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  deleteAccount: () => Promise<{ error: string | null }>;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -151,6 +152,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (session?.user) await ensureProfile(session.user);
   };
 
+  const deleteAccount = async () => {
+    try {
+      const { error } = await supabase.rpc('delete_user_account');
+      if (error) return { error: error.message };
+      setProfile(null);
+      setSession(null);
+      return { error: null };
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error('deleteAccount exception', err);
+      return { error: err.message || 'An unexpected error occurred' };
+    }
+  };
+
   return (
     <Ctx.Provider
       value={{
@@ -162,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         refreshProfile,
+        deleteAccount,
       }}
     >
       {children}
