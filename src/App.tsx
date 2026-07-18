@@ -33,7 +33,7 @@ export default function App() {
   script.src = 'http://localhost:4200/scribe-count.tracker.js';
   script.defer = true;
   script.onload = () => {
-    (window as any).tracker?.init('sc_live_sgFNnMn0Ot6nrMIhz0CKg876ss5qbZK9', { endpoint: 'http://localhost:4200/api/collect' });
+    (window as any).tracker?.init('sc_live_0iZQwSiJadJN3TrU5UHo1UR300gQDDxd', { endpoint: 'http://localhost:4200/api/collect' });
   };
   document.head.appendChild(script);
 }, []);
