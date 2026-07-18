@@ -29,14 +29,14 @@ function ScrollToTop() {
 export default function App() {
   // Paste inside App.tsx or root layout component
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://sc-web-traffic-production.up.railway.app/scribe-count.tracker.js';
-    script.defer = true;
-    script.onload = () => {
-      (window as any).tracker?.init('sc_live_ygKZLZubkWAEv8ujI6dD2vu3tpoCV36U', { endpoint: 'https://sc-web-traffic-production.up.railway.app/api/collect' });
-    };
-    document.head.appendChild(script);
-  }, []);
+  const script = document.createElement('script');
+  script.src = 'http://localhost:4200/scribe-count.tracker.js';
+  script.defer = true;
+  script.onload = () => {
+    (window as any).tracker?.init('sc_live_sgFNnMn0Ot6nrMIhz0CKg876ss5qbZK9', { endpoint: 'http://localhost:4200/api/collect' });
+  };
+  document.head.appendChild(script);
+}, []);
 
 
   return (
